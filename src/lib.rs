@@ -10,12 +10,25 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let name = scalar.sig.ident;
     let vec_name = format!("{}_auto_vec", name);
     let vec_ident = syn::Ident::new(&vec_name, name.span());
-
+    // eprintln!("SCALAR: {:#?}", ori_scalar.clone());
     // Check to ensure the function takes inputs
     if scalar.sig.inputs.len() == 0 {
         panic!("Expected one or more arguments, Found None in method {}", name);
     }
 
+    if let syn::ReturnType::Default = scalar.sig.output {
+        panic!("Expected some return type, Found () for method {}", name);
+    }
+
+    // Adds clone trait bound to generics to clone values out of vectors
+    let clone_trait_token_stream = quote! { std::clone::Clone }.into();
+    let clone_trait_ast: syn::TraitBound = parse_macro_input!(clone_trait_token_stream);
+    let mut generics = scalar.sig.generics;
+    generics.params.iter_mut().for_each(|param| {
+        if let syn::GenericParam::Type(ty) = param {
+            ty.bounds.push(syn::TypeParamBound::Trait(clone_trait_ast.clone()));
+        }
+    });
     // Extract inputs from function signature
     let inputs = scalar.sig.inputs.iter().map(|f| {
         if let syn::FnArg::Typed(arg) = f {
@@ -73,7 +86,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Generated extended method to take vectorized inputs
     let extended_method = quote! {
-        pub fn #vec_ident(#(#inputs,)*) -> #outputs {
+        pub fn #vec_ident#generics(#(#inputs,)*) -> #outputs {
             #(assert_eq!(#input_idents_for_len_assertion.len(), #input_idents_for_len_assestion_next.len(), "Input vectors of not same length");)*
             let mut result = vec![];
             for i in 0..#first_input_ident.len() {

@@ -7,17 +7,20 @@ use syn::parse_macro_input;
 pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let scalar = parse_macro_input!(input as syn::ItemFn);
     let ori_scalar = scalar.clone();
+    let visibility = &scalar.vis;
     let name = scalar.sig.ident;
     let vec_name = format!("{}_auto_vec", name);
     let vec_ident = syn::Ident::new(&vec_name, name.span());
-    // eprintln!("SCALAR: {:#?}", ori_scalar.clone());
+
+    let sig_clone_for_error = ori_scalar.sig.clone();
     // Check to ensure the function takes inputs
     if scalar.sig.inputs.len() == 0 {
-        panic!("Expected one or more arguments, Found None in method {}", name);
+        return syn::Error::new_spanned(sig_clone_for_error, "Expected one or more arguments, Found None").to_compile_error().into();
+        // panic!("Expected one or more arguments, Found None in method {}", name);
     }
-
+    // Check to ensure function has a return type
     if let syn::ReturnType::Default = scalar.sig.output {
-        panic!("Expected some return type, Found () for method {}", name);
+        return syn::Error::new_spanned(sig_clone_for_error, "Expected a return type, Found None").to_compile_error().into();
     }
 
     // Adds clone trait bound to generics to clone values out of vectors
@@ -29,21 +32,16 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
             ty.bounds.push(syn::TypeParamBound::Trait(clone_trait_ast.clone()));
         }
     });
+
     // Extract inputs from function signature
     let inputs = scalar.sig.inputs.iter().map(|f| {
         if let syn::FnArg::Typed(arg) = f {
             let arg_ident = arg.pat.clone();
-            if let syn::Type::Path(ref typ) = arg.ty.as_ref() {
-                if typ.path.segments.len() != 1 {
-                    panic!("Expected a type, found {:?}", typ.path.segments);
-                }
-                let segment = &typ.path.segments[0];
-                return quote! { #arg_ident: Vec<#segment>};
-            } else {
-                panic!("Expected Path, found {:?}", arg.ty);
-            }
+            let ty  = &arg.ty;
+            return quote!{ #arg_ident: Vec<#ty> };
         } else {
-            panic!("Expected arguments, found {:?}", f);
+            // return syn::Error::new_spanned(f.clone(), "Expected a typed argument").to_compile_error().into();
+            panic!("Expected typed arguments, found untyped self argument in function {}", name);
         }
     });
 
@@ -52,7 +50,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
         if let syn::FnArg::Typed(arg) = input {
             arg.pat.clone()
         } else {
-            panic!("Expected arguments, found {:?}", input);
+            panic!("Expected typed arguments, found untyped self argument in function {}", name);
         }
     });
 
@@ -69,24 +67,16 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     // Extract output types from function signature
     let outputs = match scalar.sig.output {
         syn::ReturnType::Type(_, ty) => {
-            if let syn::Type::Path(ref typ) = ty.as_ref() {
-                if typ.path.segments.len() != 1 {
-                    panic!("Expected Output type, found {:?}", typ);
-                }
-                let segment = &typ.path.segments[0];
-                quote! { Vec<#segment> }
-            } else {
-                panic!("Expected output type, Found {:#?}", ty);
-            }
+            quote! { Vec<#ty> }
         }
         _ => {
-            panic!("Unimplemented!");
+            panic!("Expected a return type, Found ()");
         }
     };
 
     // Generated extended method to take vectorized inputs
     let extended_method = quote! {
-        pub fn #vec_ident#generics(#(#inputs,)*) -> #outputs {
+        #visibility fn #vec_ident#generics(#(#inputs,)*) -> #outputs {
             #(assert_eq!(#input_idents_for_len_assertion.len(), #input_idents_for_len_assestion_next.len(), "Input vectors of not same length");)*
             let mut result = vec![];
             for i in 0..#first_input_ident.len() {

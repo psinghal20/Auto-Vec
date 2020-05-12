@@ -3,6 +3,10 @@ name = "auto_vec"
 version = "0.1.0"
 authors = ["psinghal20 <psinghal20@gmail.com>"]
 edition = "2018"
+description = "Auto-vec is simple proc macro to vectorize your scalar functions"
+readme = "README.md"
+repository = "https://github.com/psinghal20/Auto-Vec"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

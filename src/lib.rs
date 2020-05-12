@@ -15,11 +15,11 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let sig_clone_for_error = ori_scalar.sig.clone();
     // Check to ensure the function takes inputs
     if scalar.sig.inputs.len() == 0 {
-        return syn::Error::new_spanned(sig_clone_for_error, "Expected one or more arguments, Found None").to_compile_error().into();
+        return syn::Error::new_spanned(sig_clone_for_error, "Auto_vec: Expected one or more arguments, Found None").to_compile_error().into();
     }
     // Check to ensure function has a return type
     if let syn::ReturnType::Default = scalar.sig.output {
-        return syn::Error::new_spanned(sig_clone_for_error, "Expected a return type, Found None").to_compile_error().into();
+        return syn::Error::new_spanned(sig_clone_for_error, "Auto_vec: Expected a return type, Found None").to_compile_error().into();
     }
 
     // Copy generics for forming extended method's signature
@@ -32,24 +32,28 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
             let ty  = &arg.ty;
             return quote!{ mut #arg_ident: Vec<#ty> };
         } else {
-            panic!("Expected typed arguments, found untyped self argument in function {}", name);
+            syn::Error::new_spanned(f, "Expected typed arguments, found untyped argument").to_compile_error()
         }
     });
 
     // Extract input argument idents from the function signature 
     let input_idents = scalar.sig.inputs.iter().map(|input| {
         if let syn::FnArg::Typed(arg) = input {
-            arg.pat.clone()
+            let pattern = arg.pat.clone();
+            let expr = quote! { #pattern };
+            expr
         } else {
-            panic!("Expected typed arguments, found untyped self argument in function {}", name);
+            syn::Error::new_spanned(input, "Expected typed arguments, found untyped self argument").to_compile_error()
         }
     });
 
     // Copy of idents used for function call
     let input_idents_for_function_call = input_idents.clone();
-    // Copy of idents to be used for length assertions
+    // Copies of idents to be used for length assertions
     let input_idents_for_len_assertion = input_idents.clone();
     let mut input_idents_for_len_assestion_next = input_idents.clone();
+
+    // Move the copy one element forward for assert_eq
     input_idents_for_len_assestion_next.next();
 
     // Extract first input ident to be used for for loop
@@ -61,7 +65,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
             quote! { Vec<#ty> }
         }
         _ => {
-            panic!("Expected a return type, Found ()");
+            syn::Error::new_spanned(sig_clone_for_error, "Auto_vec: Expected a return type, Found None").to_compile_error().into()
         }
     };
 

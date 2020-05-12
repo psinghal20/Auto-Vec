@@ -45,7 +45,6 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
             Some(expr)
         } else {
             None
-            // syn::Error::new_spanned(input, "Expected typed arguments, found untyped self argument").to_compile_error()
         }
     }).collect();
 

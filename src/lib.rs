@@ -9,14 +9,13 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let ori_scalar = scalar.clone();
     let visibility = &scalar.vis;
     let name = scalar.sig.ident;
-    let vec_name = format!("{}_auto_vec", name);
+    let vec_name = format!("{}_vec", name);
     let vec_ident = syn::Ident::new(&vec_name, name.span());
 
     let sig_clone_for_error = ori_scalar.sig.clone();
     // Check to ensure the function takes inputs
     if scalar.sig.inputs.len() == 0 {
         return syn::Error::new_spanned(sig_clone_for_error, "Expected one or more arguments, Found None").to_compile_error().into();
-        // panic!("Expected one or more arguments, Found None in method {}", name);
     }
     // Check to ensure function has a return type
     if let syn::ReturnType::Default = scalar.sig.output {

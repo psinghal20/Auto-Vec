@@ -22,24 +22,16 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
         return syn::Error::new_spanned(sig_clone_for_error, "Expected a return type, Found None").to_compile_error().into();
     }
 
-    // Adds clone trait bound to generics to clone values out of vectors
-    let clone_trait_token_stream = quote! { std::clone::Clone }.into();
-    let clone_trait_ast: syn::TraitBound = parse_macro_input!(clone_trait_token_stream);
-    let mut generics = scalar.sig.generics;
-    generics.params.iter_mut().for_each(|param| {
-        if let syn::GenericParam::Type(ty) = param {
-            ty.bounds.push(syn::TypeParamBound::Trait(clone_trait_ast.clone()));
-        }
-    });
+    // Copy generics for forming extended method's signature
+    let generics = scalar.sig.generics;
 
     // Extract inputs from function signature
     let inputs = scalar.sig.inputs.iter().map(|f| {
         if let syn::FnArg::Typed(arg) = f {
             let arg_ident = arg.pat.clone();
             let ty  = &arg.ty;
-            return quote!{ #arg_ident: Vec<#ty> };
+            return quote!{ mut #arg_ident: Vec<#ty> };
         } else {
-            // return syn::Error::new_spanned(f.clone(), "Expected a typed argument").to_compile_error().into();
             panic!("Expected typed arguments, found untyped self argument in function {}", name);
         }
     });
@@ -54,7 +46,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     });
 
     // Copy of idents used for function call
-    let input_idents_for_foo_call = input_idents.clone();
+    let input_idents_for_function_call = input_idents.clone();
     // Copy of idents to be used for length assertions
     let input_idents_for_len_assertion = input_idents.clone();
     let mut input_idents_for_len_assestion_next = input_idents.clone();
@@ -79,7 +71,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
             #(assert_eq!(#input_idents_for_len_assertion.len(), #input_idents_for_len_assestion_next.len(), "Input vectors of not same length");)*
             let mut result = vec![];
             for i in 0..#first_input_ident.len() {
-                result.push(#name(#(#input_idents_for_foo_call[i].clone(),)*));
+                result.push(#name(#(#input_idents_for_function_call.remove(0),)*));
             }
             return result;
         }

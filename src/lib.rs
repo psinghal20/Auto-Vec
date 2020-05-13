@@ -3,6 +3,49 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
 
+/// `auto_vec` is a proc_macro to vectorize your scalar functions,
+/// generating a new function with the name of the form `{original_function_name}_vec`.
+/// This function would now take as arguments vectors of the arguments passed to original function.
+///
+/// For eg.
+/// # Examples
+///
+/// ```
+/// #[auto_vec]
+/// fn foo(a: usize, b: usize) -> usize {
+///     return a + b;
+/// }
+/// ```
+///
+/// Generating a function like this:
+/// ```
+/// fn foo_vec(a: Vec<usize>, b: Vec<usize>) -> Vec<usize>;
+/// ```
+///
+/// Auto vec can also be used to generate vectorized methods for different types
+/// The methods need to take self as an untyped argument ie. `self: Box<self>` would not work right now.
+///
+/// ```
+/// struct T;
+/// impl T {
+///     #[auto_vec]
+///     fn bar(&self, arg1: usize, arg2: usize) -> usize;
+/// }
+/// ```
+///
+/// # Panics
+/// - If there are no typed(other than self) inputs to the attributed function
+/// ```
+/// fn foo() -> usize; // Compile time error
+///
+/// fn bar(&self) -> usize; // Compile time error
+/// ```
+///
+/// - If there is no return type in the attributed function
+/// ```
+/// fn foo(a: usize, b: usize) {} // Compile time error
+/// ```
+/// - If the length of input vectors is different to the vectorized function
 #[proc_macro_attribute]
 pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let scalar = parse_macro_input!(input as syn::ItemFn);

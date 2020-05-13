@@ -8,9 +8,8 @@ use syn::parse_macro_input;
 /// This function would now take as arguments vectors of the arguments passed to original function.
 ///
 /// For eg.
-/// # Examples
 ///
-/// ```
+/// ```dead_code
 /// #[auto_vec]
 /// fn foo(a: usize, b: usize) -> usize {
 ///     return a + b;
@@ -18,34 +17,57 @@ use syn::parse_macro_input;
 /// ```
 ///
 /// Generating a function like this:
-/// ```
-/// fn foo_vec(a: Vec<usize>, b: Vec<usize>) -> Vec<usize>;
+/// ```dead_code
+/// fn foo_vec(a: Vec<usize>, b: Vec<usize>) -> Vec<usize> {}
 /// ```
 ///
 /// Auto vec can also be used to generate vectorized methods for different types
 /// The methods need to take self as an untyped argument ie. `self: Box<self>` would not work right now.
 ///
-/// ```
+/// ```dead_code
 /// struct T;
 /// impl T {
 ///     #[auto_vec]
-///     fn bar(&self, arg1: usize, arg2: usize) -> usize;
+///     fn bar(&self, arg1: usize, arg2: usize) -> usize {}
+///     // Generates
+///     fn bar_vec(&self, arg1: Vec<usize>, arg2: Vec<usize>) -> usize {}
 /// }
 /// ```
 ///
-/// # Panics
+/// # Compile Fail
 /// - If there are no typed(other than self) inputs to the attributed function
-/// ```
-/// fn foo() -> usize; // Compile time error
+/// ```rust,compile_fail
+/// # use auto_vec::auto_vec;
+/// #[auto_vec]
+/// fn foo() -> usize {
+///    # return 5; // Compile time error
+/// }
 ///
-/// fn bar(&self) -> usize; // Compile time error
+/// #[auto_vec]
+/// fn bar(&self) -> usize {
+///    # return 5; // Compile time error
+/// }
 /// ```
 ///
 /// - If there is no return type in the attributed function
-/// ```
+/// ```rust,compile_fail
+/// # use auto_vec::auto_vec;
+/// #[auto_vec]
 /// fn foo(a: usize, b: usize) {} // Compile time error
 /// ```
-/// - If the length of input vectors is different to the vectorized function
+/// # Panics
+/// If the length of input vectors is different to the vectorized function
+/// ```rust,should_panic
+/// # use auto_vec::auto_vec;
+/// #[auto_vec]
+/// fn foo(a: usize, b: usize) -> usize {
+///     return a + b;
+/// }
+///
+/// fn main() {
+///     foo_vec(vec![1], vec![1, 2]);
+/// }
+
 #[proc_macro_attribute]
 pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let scalar = parse_macro_input!(input as syn::ItemFn);

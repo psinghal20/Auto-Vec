@@ -149,7 +149,7 @@ pub fn auto_vec(_args: TokenStream, input: TokenStream) -> TokenStream {
     let extended_method = quote! {
         #visibility fn #vec_ident#generics(#(#inputs,)*) -> #outputs {
             #(assert_eq!(#input_idents_for_len_assertion.len(), #input_idents_for_len_assestion_next.len(), "Input vectors of not the same length to vectorized function {}", #vec_name);)*
-            let mut result = vec![];
+            let mut result = std::vec::Vec::with_capacity(#first_input_ident.len());
             for i in 0..#first_input_ident.len() {
                 result.push(#function_caller(#(#input_idents_for_function_call.remove(0),)*));
             }

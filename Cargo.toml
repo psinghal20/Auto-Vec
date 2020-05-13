@@ -17,3 +17,6 @@ proc-macro = true
 syn = { version = "1.0.19", features = ["full", "extra-traits"]  }
 quote = "1.0.4"
 proc-macro2 = "1.0.12"
+
+[dev-dependencies]
+trybuild = "1.0"

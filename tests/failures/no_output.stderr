@@ -1,0 +1,5 @@
+error: Auto_vec: Expected a return type, Found None
+ --> $DIR/no_output.rs:4:1
+  |
+4 | fn foo(a: usize) { }
+  | ^^^^^^^^^^^^^^^^

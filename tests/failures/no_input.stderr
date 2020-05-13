@@ -1,0 +1,5 @@
+error: Auto_vec: Expected one or more arguments, Found None
+ --> $DIR/no_input.rs:4:1
+  |
+4 | fn foo() -> usize {
+  | ^^^^^^^^^^^^^^^^^
